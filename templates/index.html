@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ウイルス混入版オセロ</title>
+    <style>
+        body { 
+            font-family: sans-serif; 
+            text-align: center; 
+            background-color: #2b2b2b;
+            color: white;
+        }
+        h1 { margin-top: 20px; }
+        #board {
+            display: grid;
+            grid-template-columns: repeat(8, 60px);
+            grid-template-rows: repeat(8, 60px);
+            gap: 2px;
+            justify-content: center;
+            margin: 20px auto;
+            background-color: #006400;
+            padding: 5px;
+            border: 4px solid #000;
+            border-radius: 10px;
+        }
+        .cell {
+            width: 60px;
+            height: 60px;
+            background-color: #008000;
+            border-radius: 5px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .cell:hover { transform: scale(1.05); }
+        .stone {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            box-shadow: inset -2px -2px 5px rgba(0,0,0,0.5), 
+                        2px 2px 5px rgba(0,0,0,0.3);
+        }
+        .black { background-color: black; }
+        .white { background-color: white; }
+        #message { margin-top: 20px; font-size: 18px; }
+    </style>
+</head>
+<body>
+    <h1>オセロ 完全版</h1>
+    <div id="board"></div>
+    <div id="message"></div>
+
+    <script>
+        const board = document.getElementById("board");
+        const message = document.getElementById("message");
+        const size = 8;
+        let turn = "black";
+        let grid = Array(size*size).fill(null);
+
+        // 初期配置
+        const initial = [27,28,35,36];
+        initial.forEach((i,index) => {
+            grid[i] = index < 2 ? "white" : "black";
+        });
+
+        // マス作成
+        for (let i = 0; i < size*size; i++) {
+            const cell = document.createElement("div");
+            cell.classList.add("cell");
+            cell.dataset.index = i;
+            cell.addEventListener("click", () => placeStone(i));
+            board.appendChild(cell);
+        }
+
+        renderBoard();
+        updateMessage();
+
+        // 8方向のdx,dy
+        const directions = [
+            [-1,-1],[0,-1],[1,-1],
+            [-1,0],        [1,0],
+            [-1,1],[0,1],[1,1]
+        ];
+
+        function renderBoard() {
+            for (let i=0; i<grid.length; i++) {
+                const cell = board.children[i];
+                cell.innerHTML = "";
+                if(grid[i]) {
+                    const stone = document.createElement("div");
+                    stone.classList.add("stone", grid[i]);
+                    cell.appendChild(stone);
+                }
+            }
+        }
+
+        function placeStone(pos) {
+            if(grid[pos]) return;
+            const flips = getFlips(pos, turn);
+            if(flips.length === 0) return;
+
+            grid[pos] = turn;
+            flips.forEach(i => grid[i] = turn);
+
+            turn = turn === "black" ? "white" : "black";
+
+            renderBoard();
+
+            if(!hasValidMove(turn)) {
+                turn = turn === "black" ? "white" : "black"; // パス
+                if(!hasValidMove(turn)) {
+                    gameOver();
+                    return;
+                } else {
+                    alert("パスしました！");
+                }
+            }
+
+            updateMessage();
+        }
+
+        function getFlips(pos, color) {
+            let flips = [];
+            const x = pos % size;
+            const y = Math.floor(pos / size);
+
+            for(let [dx,dy] of directions) {
+                let nx = x + dx;
+                let ny = y + dy;
+                let line = [];
+                while(nx >=0 && nx < size && ny >=0 && ny < size) {
+                    const idx = ny*size + nx;
+                    if(!grid[idx]) break;
+                    if(grid[idx] === color) {
+                        flips = flips.concat(line);
+                        break;
+                    }
+                    line.push(idx);
+                    nx += dx;
+                    ny += dy;
+                }
+            }
+            return flips;
+        }
+
+        function hasValidMove(color) {
+            for(let i=0;i<grid.length;i++){
+                if(!grid[i] && getFlips(i,color).length>0) return true;
+            }
+            return false;
+        }
+
+        function gameOver() {
+            const blackCount = grid.filter(s=>s==="black").length;
+            const whiteCount = grid.filter(s=>s==="white").length;
+            if(blackCount>whiteCount) message.textContent = `ゲーム終了！ 黒の勝ち (${blackCount} vs ${whiteCount})`;
+            else if(whiteCount>blackCount) message.textContent = `ゲーム終了！ 白の勝ち (${blackCount} vs ${whiteCount})`;
+            else message.textContent = `ゲーム終了！ 引き分け (${blackCount} vs ${whiteCount})`;
+        }
+
+        function updateMessage() {
+            message.textContent = `次の手: ${turn==="black"?"黒":"白"}`;
+        }
+    </script>
+</body>
+</html>
